@@ -69,10 +69,10 @@
             </objects>
             <point key="canvasLocation" x="1050.7246376811595" y="95.758928571428569"/>
         </scene>
-        <!--Interface-->
+        <!--Places List View Controller-->
         <scene sceneID="ZVI-Xr-8ya">
             <objects>
-                <viewController id="Q1K-Q4-v7O" customClass="Interface" customModule="TravelBook" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="Q1K-Q4-v7O" customClass="PlacesListViewController" customModule="TravelBook" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="O1D-D8-xcA">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>

@@ -14,7 +14,7 @@
 		985DF96D28BD1BB400686141 /* TravelBook.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 985DF96B28BD1BB400686141 /* TravelBook.xcdatamodeld */; };
 		985DF96F28BD1BB600686141 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 985DF96E28BD1BB600686141 /* Assets.xcassets */; };
 		985DF97228BD1BB600686141 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 985DF97028BD1BB600686141 /* LaunchScreen.storyboard */; };
-		98D587C728C3975D00DD9591 /* Interface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D587C628C3975D00DD9591 /* Interface.swift */; };
+		98D587C728C3975D00DD9591 /* PlacesListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D587C628C3975D00DD9591 /* PlacesListViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 		985DF96E28BD1BB600686141 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		985DF97128BD1BB600686141 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		985DF97328BD1BB600686141 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		98D587C628C3975D00DD9591 /* Interface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interface.swift; sourceTree = "<group>"; };
+		98D587C628C3975D00DD9591 /* PlacesListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesListViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,7 +63,7 @@
 				985DF96228BD1BB400686141 /* AppDelegate.swift */,
 				985DF96428BD1BB400686141 /* SceneDelegate.swift */,
 				985DF96628BD1BB400686141 /* ViewController.swift */,
-				98D587C628C3975D00DD9591 /* Interface.swift */,
+				98D587C628C3975D00DD9591 /* PlacesListViewController.swift */,
 				985DF96828BD1BB400686141 /* Main.storyboard */,
 				985DF96E28BD1BB600686141 /* Assets.xcassets */,
 				985DF97028BD1BB600686141 /* LaunchScreen.storyboard */,
@@ -144,7 +144,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				985DF96D28BD1BB400686141 /* TravelBook.xcdatamodeld in Sources */,
-				98D587C728C3975D00DD9591 /* Interface.swift in Sources */,
+				98D587C728C3975D00DD9591 /* PlacesListViewController.swift in Sources */,
 				985DF96728BD1BB400686141 /* ViewController.swift in Sources */,
 				985DF96328BD1BB400686141 /* AppDelegate.swift in Sources */,
 				985DF96528BD1BB400686141 /* SceneDelegate.swift in Sources */,
