@@ -15,131 +15,195 @@ class ViewController: UIViewController, MKMapViewDelegate, CLLocationManagerDele
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var nameText: UITextField!
     @IBOutlet weak var noteText: UITextField!
-    
-    var locationManager = CLLocationManager()
-    var latitude = Double()
-    var longitude = Double()
-    
-    var selectedTitle = ""
+
+    private let locationManager = CLLocationManager()
+    private var selectedCoordinate: CLLocationCoordinate2D?
+    private var selectedPlace: NSManagedObject?
+
     var selectedTitleID : UUID?
-    
-    var annotationTitle = ""
-    var annotationSubtitle = ""
-    var annotationLatitude = Double()
-    var annotationLongitude = Double()
-    
-    
+
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        configureView()
+        configureMap()
+        configureLocationManager()
+        loadSelectedPlaceIfNeeded()
+    }
+
+    private var context: NSManagedObjectContext {
+        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
+            fatalError("Unable to access AppDelegate")
+        }
+        return appDelegate.persistentContainer.viewContext
+    }
+
+    private var isEditingExistingPlace: Bool {
+        selectedPlace != nil
+    }
+
+    private func configureView() {
+        title = selectedTitleID == nil ? "New Place" : "Place Details"
+        navigationItem.largeTitleDisplayMode = .never
+        nameText.delegate = self
+        noteText.delegate = self
+        nameText.returnKeyType = .next
+        noteText.returnKeyType = .done
+    }
+
+    private func configureMap() {
         mapView.delegate = self
+
+        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(chooseLocation(gestureRecognizer:)))
+        gestureRecognizer.minimumPressDuration = 1
+        mapView.addGestureRecognizer(gestureRecognizer)
+    }
+
+    private func configureLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.requestWhenInUseAuthorization()
         locationManager.startUpdatingLocation()
-        
-        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(chossenLocation(gestureRecognizer:)))
-        gestureRecognizer.minimumPressDuration = 3
-        mapView.addGestureRecognizer(gestureRecognizer)
-        
-        if selectedTitle != "" {
-            let appDelegate = UIApplication.shared.delegate as! AppDelegate
-            let context = appDelegate.persistentContainer.viewContext
-            
-            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Place")
-            let idString = selectedTitleID!.uuidString
-            fetchRequest.predicate = NSPredicate(format: "id = %@", idString)
-            fetchRequest.returnsObjectsAsFaults = false
-            
-            do {
-                let result = try context.fetch(fetchRequest)
-                if result.count > 0 {
-                    for results in result as! [NSManagedObject] {
-                        
-                        if let title = results.value(forKey: "title") as? String{
-                            annotationTitle = title
-                            if let subtitle = results.value(forKey: "subtitle") as? String{
-                                annotationSubtitle = subtitle
-                            }
-                                if let latitude = results.value(forKey: "latitude") as? Double {
-                                    annotationLatitude = latitude
-                                }
-                                    if let longitude = results.value(forKey: "longitude") as? Double {
-                                        annotationLongitude = longitude
-                                        
-                                        let annotation = MKPointAnnotation()
-                                        annotation.title = annotationTitle
-                                        annotation.subtitle = annotationSubtitle
-                                        let annotationCoordinate = CLLocationCoordinate2D(latitude: annotationLatitude, longitude: annotationLongitude)
-                                        annotation.coordinate = annotationCoordinate
-                                        
-                                        mapView.addAnnotation(annotation)
-                                        nameText.text = annotationTitle
-                                        noteText.text = annotationSubtitle
-                                    }
-                        }
-                        
-                    }
-                }
-            } catch {
-                print("Error")
+    }
+
+    private func loadSelectedPlaceIfNeeded() {
+        guard let selectedTitleID else { return }
+
+        let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Place")
+        fetchRequest.predicate = NSPredicate(format: "%K == %@", "id", selectedTitleID as NSUUID)
+        fetchRequest.fetchLimit = 1
+        fetchRequest.returnsObjectsAsFaults = false
+
+        do {
+            guard let place = try context.fetch(fetchRequest).first as? NSManagedObject else {
+                showAlert(title: "Place not found", message: "This place may have been removed.")
+                return
             }
-            
-            
-        } else {
-            
+
+            selectedPlace = place
+            let title = place.value(forKey: "title") as? String ?? ""
+            let subtitle = place.value(forKey: "subtitle") as? String ?? ""
+            let latitude = place.value(forKey: "latitude") as? Double ?? 0
+            let longitude = place.value(forKey: "longitude") as? Double ?? 0
+            let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+
+            nameText.text = title
+            noteText.text = subtitle
+            selectedCoordinate = coordinate
+            addAnnotation(title: title, subtitle: subtitle, coordinate: coordinate, shouldReplaceExisting: true)
+            focusMap(on: coordinate, animated: false)
+        } catch {
+            showAlert(title: "Could not load place", message: error.localizedDescription)
         }
-        
     }
-    
-    @objc func chossenLocation(gestureRecognizer:UILongPressGestureRecognizer) {
-        
-        if gestureRecognizer.state == .began {
-            
-            let touchedPoint = gestureRecognizer.location(in: self.mapView)
-            let touchedCoordinate = self.mapView.convert(touchedPoint, toCoordinateFrom: self.mapView)
-            
-            latitude = touchedCoordinate.latitude
-            longitude = touchedCoordinate.longitude
-            
-            let anatation = MKPointAnnotation()
-            anatation.coordinate = touchedCoordinate
-            anatation.title = nameText.text
-            anatation.subtitle = noteText.text
-            self.mapView.addAnnotation(anatation)
-            
-        }
-        
+
+    @objc private func chooseLocation(gestureRecognizer: UILongPressGestureRecognizer) {
+        guard gestureRecognizer.state == .began else { return }
+
+        view.endEditing(true)
+        let touchedPoint = gestureRecognizer.location(in: mapView)
+        let touchedCoordinate = mapView.convert(touchedPoint, toCoordinateFrom: mapView)
+        selectedCoordinate = touchedCoordinate
+
+        addAnnotation(title: nameText.text, subtitle: noteText.text, coordinate: touchedCoordinate, shouldReplaceExisting: true)
+        focusMap(on: touchedCoordinate, animated: true)
+
     }
-    
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        let location = CLLocationCoordinate2D(latitude: locations[0].coordinate.latitude, longitude: locations[0].coordinate.longitude)
-        let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        let region = MKCoordinateRegion(center: location, span: span)
-        mapView.setRegion(region, animated: true)
+        guard selectedCoordinate == nil, let location = locations.last else { return }
+        focusMap(on: location.coordinate, animated: true)
+        locationManager.stopUpdatingLocation()
     }
-    
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            locationManager.startUpdatingLocation()
+        case .denied, .restricted:
+            showAlert(title: "Location unavailable", message: "You can still save places by long-pressing the map.")
+        case .notDetermined:
+            break
+        @unknown default:
+            break
+        }
+    }
+
     @IBAction func saveButton(_ sender: Any) {
-        
-        let appDelegate = UIApplication.shared.delegate as! AppDelegate
-        let context = appDelegate.persistentContainer.viewContext
-        
-        let newPlace = NSEntityDescription.insertNewObject(forEntityName: "Place", into: context)
-        
-        newPlace.setValue(nameText.text, forKey: "title")
-        newPlace.setValue(noteText.text, forKey: "subtitle")
-        newPlace.setValue(latitude, forKey: "latitude")
-        newPlace.setValue(longitude, forKey: "longitude")
-        newPlace.setValue(UUID(), forKey: "id")
-        
+        view.endEditing(true)
+
+        guard let title = nameText.text?.nonEmptyValue else {
+            showAlert(title: "Name required", message: "Add a name before saving this place.")
+            return
+        }
+
+        guard let coordinate = selectedCoordinate else {
+            showAlert(title: "Location required", message: "Long-press the map to drop a pin before saving.")
+            return
+        }
+
+        let place = selectedPlace ?? NSEntityDescription.insertNewObject(forEntityName: "Place", into: context)
+        place.setValue(title, forKey: "title")
+        place.setValue(noteText.text?.nonEmptyValue, forKey: "subtitle")
+        place.setValue(coordinate.latitude, forKey: "latitude")
+        place.setValue(coordinate.longitude, forKey: "longitude")
+
+        if !isEditingExistingPlace {
+            place.setValue(UUID(), forKey: "id")
+        }
+
         do {
             try context.save()
+            navigationController?.popViewController(animated: true)
         } catch {
-            print("error")
+            context.rollback()
+            showAlert(title: "Could not save place", message: error.localizedDescription)
         }
-        
-        
     }
-    
+
+    private func addAnnotation(title: String?, subtitle: String?, coordinate: CLLocationCoordinate2D, shouldReplaceExisting: Bool) {
+        if shouldReplaceExisting {
+            mapView.removeAnnotations(mapView.annotations)
+        }
+
+        let annotation = MKPointAnnotation()
+        annotation.coordinate = coordinate
+        annotation.title = title?.nonEmptyValue ?? "Selected place"
+        annotation.subtitle = subtitle?.nonEmptyValue
+        mapView.addAnnotation(annotation)
+    }
+
+    private func focusMap(on coordinate: CLLocationCoordinate2D, animated: Bool) {
+        let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        let region = MKCoordinateRegion(center: coordinate, span: span)
+        mapView.setRegion(region, animated: animated)
+    }
+
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+
+}
+
+extension ViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        switch textField {
+        case nameText:
+            noteText.becomeFirstResponder()
+        default:
+            textField.resignFirstResponder()
+        }
+        return true
+    }
+}
+
+private extension String {
+    var nonEmptyValue: String? {
+        let trimmedValue = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedValue.isEmpty ? nil : trimmedValue
+    }
 }
 
